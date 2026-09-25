@@ -3,17 +3,24 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>水下考古潜水记录</title>
+  <title>水下考古潜水记录 · 脱盐监护台</title>
   <style>
     * { box-sizing: border-box; }
     body { margin: 0; font-family: Arial, "PingFang SC", sans-serif; background: #e8f2f3; color: #183035; }
     header { padding: 18px 24px; background: #fff; border-bottom: 1px solid #c9dadc; display: flex; justify-content: space-between; gap: 16px; align-items: center; }
     h1 { margin: 0; font-size: 26px; }
+    h2 { font-size: 17px; margin: 14px 0 8px; }
+    h3 { margin: 0 0 10px; font-size: 15px; display: flex; justify-content: space-between; align-items: center; }
     button { border: 0; border-radius: 8px; padding: 10px 13px; background: #1d6c78; color: #fff; font-weight: 800; cursor: pointer; }
     button.secondary { background: #64777b; }
+    button.danger { background: #a33d3d; }
+    button.mini { padding: 4px 9px; font-size: 12px; border-radius: 6px; }
     input, select, textarea { width: 100%; border: 1px solid #c9dadc; border-radius: 6px; padding: 9px; font: inherit; background: #fff; }
     textarea { min-height: 64px; }
     label { display: block; margin: 9px 0 5px; color: #5c7378; font-size: 13px; }
+    .tabs { display: flex; gap: 8px; }
+    .tab { background: #cfe3e5; color: #23494f; }
+    .tab.active { background: #1d6c78; color: #fff; }
     .app { display: grid; grid-template-columns: 1fr 360px; gap: 16px; padding: 16px; }
     .panel { background: #fff; border: 1px solid #c9dadc; border-radius: 8px; padding: 14px; }
     .map { position: relative; height: calc(100vh - 128px); min-height: 560px; overflow: hidden; background: radial-gradient(circle at 30% 20%, #5fa8b1, #0f5262 55%, #07333f); border-radius: 8px; border: 1px solid #0c4451; cursor: crosshair; }
@@ -26,18 +33,79 @@
     .list { display: grid; gap: 8px; max-height: 330px; overflow: auto; }
     .item { border: 1px solid #d7e4e5; border-radius: 8px; padding: 10px; cursor: pointer; }
     .item.active { border-color: #1d6c78; background: #eef8f9; }
-    .timeline { display: grid; gap: 8px; max-height: 240px; overflow: auto; }
+    .timeline { display: grid; gap: 8px; max-height: 330px; overflow: auto; }
     .pill { display: inline-block; padding: 3px 8px; border: 1px solid #c9dadc; border-radius: 999px; font-size: 12px; }
     .muted { color: #5c7378; font-size: 13px; }
-    @media (max-width: 980px) { header { display: block; } .app { grid-template-columns: 1fr; } .map { height: 560px; } }
+    /* 脱盐监护台 */
+    .console { padding: 16px; }
+    .boardbar { background: #fff; border: 1px solid #c9dadc; border-radius: 8px; padding: 12px 14px; display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end; }
+    .batchmeta { min-width: 230px; }
+    .batchmeta b { font-size: 17px; }
+    .boardbar .field { display: flex; align-items: center; gap: 6px; }
+    .boardbar .field input, .boardbar .field select { width: auto; min-width: 96px; padding: 7px 9px; }
+    .boardbar .spacer { flex: 1; }
+    .board { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 14px; align-items: start; }
+    .column { background: #f4f9fa; border: 1px solid #c9dadc; border-radius: 8px; padding: 12px; min-height: 120px; }
+    .column h3 .count { font-weight: 400; color: #5c7378; }
+    .col-abn { background: #fdf3f1; border-color: #e3c2bb; }
+    .col-done { background: #f2f6f1; border-color: #c9d9c8; }
+    .tankcard { background: #fff; border: 1px solid #d7e4e5; border-left: 5px solid #1d6c78; border-radius: 8px; padding: 10px 11px; margin-bottom: 10px; }
+    .tankcard.conflict { border-left-color: #b0473a; background: #fdf6f5; }
+    .tankcard.ready { border-left-color: #3e8a52; }
+    .tankcard.archived { border-left-color: #8a9a92; opacity: .92; }
+    .tankcard.void { border-left-color: #9aa0a6; background: #f3f4f4; position: relative; }
+    .tank-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 6px; }
+    .tank-head b { font-size: 15px; }
+    .artrow { border-top: 1px dashed #dde8e9; padding: 7px 0; }
+    .artrow:first-of-type { border-top: 0; }
+    .art-main { display: flex; justify-content: space-between; gap: 8px; align-items: center; }
+    .reading { font-weight: 800; }
+    .reading.over { color: #b0473a; }
+    .reading.ok { color: #2f7a45; }
+    .tags { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 5px; }
+    .tag { font-size: 12px; padding: 2px 8px; border-radius: 999px; border: 1px solid #c9dadc; color: #48646a; background: #f4f9fa; }
+    .tag.bad { border-color: #e0b3ab; color: #96382d; background: #fbeeec; }
+    .tag.good { border-color: #b6d3bb; color: #2f6d43; background: #edf7ef; }
+    .tag.warn { border-color: #e3cf9f; color: #8a6417; background: #fbf5e3; }
+    .rowbtns { display: flex; gap: 6px; margin-top: 7px; }
+    .stamp { position: absolute; right: 12px; top: 10px; border: 2px solid #b0473a; color: #b0473a; border-radius: 6px; padding: 2px 9px; font-weight: 800; transform: rotate(-8deg); letter-spacing: 3px; font-size: 13px; }
+    .empty { color: #7a9095; font-size: 13px; text-align: center; padding: 18px 6px; }
+    /* 弹窗 */
+    .modal { position: fixed; inset: 0; background: rgba(15,40,47,.5); display: grid; place-items: center; z-index: 30; padding: 18px; }
+    .modal[hidden] { display: none; }
+    .modal-card { background: #fff; border-radius: 10px; max-width: 560px; width: 100%; max-height: 86vh; overflow: auto; padding: 18px 20px; box-shadow: 0 18px 48px rgba(0,0,0,.3); }
+    .modal-card h2 { margin-top: 0; }
+    .modal-foot { display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px; }
+    table.readings { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 6px; }
+    table.readings th, table.readings td { border-bottom: 1px solid #e1ebec; padding: 6px 7px; text-align: left; }
+    table.readings input { padding: 6px; }
+    .inlineform { display: grid; grid-template-columns: 1fr 1fr auto; gap: 8px; align-items: end; margin-top: 10px; }
+    .confirmlist { background: #fbf5e3; border: 1px solid #e3cf9f; border-radius: 8px; padding: 9px 12px; font-size: 13px; color: #8a6417; margin: 10px 0; }
+    @media (max-width: 980px) {
+      header { display: block; }
+      .tabs { margin-top: 10px; }
+      .app { grid-template-columns: 1fr; }
+      .map { height: 480px; }
+      .board { grid-template-columns: 1fr; }
+    }
   </style>
 </head>
 <body>
   <header>
-    <div><h1>水下考古潜水记录</h1><div class="muted">点击沉船平面图添加标记，筛选、编辑并导出JSON。</div></div>
-    <button id="exportBtn">导出JSON</button>
+    <div>
+      <h1>水下考古潜水记录 · 脱盐监护台</h1>
+      <div class="muted" id="subtitle">沉船平面图标记，以及出水遗物脱盐槽换水监护、结批与留档。</div>
+    </div>
+    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+      <nav class="tabs">
+        <button class="tab active" data-tab="dive" type="button">潜水图与标记</button>
+        <button class="tab" data-tab="tank" type="button">脱盐监护台</button>
+      </nav>
+      <button id="exportBtn">导出标记JSON</button>
+    </div>
   </header>
-  <main class="app">
+
+  <main class="app" id="diveView">
     <section class="panel">
       <div class="map" id="map"><div class="wreck"></div></div>
     </section>
@@ -50,7 +118,9 @@
         <h2>标记信息</h2>
         <input name="id" type="hidden">
         <label>编号</label><input name="code" required>
-        <label>类型</label><select name="type"><option value="ceramic">陶片</option><option value="wood">木构件</option><option value="metal">金属件</option><option value="unknown">未知物</option></select>
+        <label>材质（决定可否同槽混放）</label><select name="type"><option value="ceramic">陶片</option><option value="wood">木构件</option><option value="metal">金属件</option><option value="unknown">未知物</option></select>
+        <label>槽号（留空表示尚未入槽）</label><input name="tank" placeholder="例如 T-01">
+        <label>入槽时刻</label><input name="enteredAt" type="datetime-local">
         <label>潜次</label><input name="dive" placeholder="例如DIVE-04" required>
         <label>深度</label><input name="depth" placeholder="例如18.4m" required>
         <label>朝向</label><input name="orientation" placeholder="例如东北偏北">
@@ -62,93 +132,37 @@
       <div id="list" class="list"></div>
     </aside>
   </main>
-  <script>
-    const map = document.querySelector("#map");
-    const form = document.querySelector("#form");
-    const list = document.querySelector("#list");
-    const filter = document.querySelector("#filter");
-    const view = document.querySelector("#view");
-    const listTitle = document.querySelector("#listTitle");
-    const typeNames = { ceramic: "陶片", wood: "木构件", metal: "金属件", unknown: "未知物" };
-    let marks = JSON.parse(localStorage.getItem("zfl30Marks") || "[]");
-    let pending = null;
-    if (!marks.length) {
-      marks = [
-        { id: crypto.randomUUID(), code: "A-017", type: "ceramic", dive: "DIVE-01", x: 42, y: 46, depth: "17.8m", orientation: "东", condition: "边缘残缺", note: "靠近船肋" },
-        { id: crypto.randomUUID(), code: "W-003", type: "wood", dive: "DIVE-02", x: 58, y: 39, depth: "18.2m", orientation: "西北", condition: "稳定", note: "疑似横梁" }
-      ];
-      save();
-    }
-    for (let i = 0; i < 7; i++) {
-      const rib = document.createElement("div");
-      rib.className = "rib";
-      rib.style.left = 28 + i * 7 + "%";
-      map.appendChild(rib);
-    }
-    function save() { localStorage.setItem("zfl30Marks", JSON.stringify(marks)); }
-    function render() {
-      map.querySelectorAll(".marker").forEach(el => el.remove());
-      const filtered = filter.value ? marks.filter(m => m.type === filter.value) : marks;
-      filtered.forEach(mark => {
-        const el = document.createElement("button");
-        el.className = "marker " + mark.type + (mark.id === form.id.value ? " selected" : "");
-        el.style.left = mark.x + "%";
-        el.style.top = mark.y + "%";
-        el.textContent = mark.code.slice(0, 2);
-        el.onclick = event => { event.stopPropagation(); edit(mark.id); };
-        map.appendChild(el);
-      });
-      if (view.value === "timeline") renderTimeline(filtered);
-      else renderList(filtered);
-    }
-    function renderList(data) {
-      listTitle.textContent = "标记列表";
-      list.className = "list";
-      list.innerHTML = data.map(m => '<div class="item '+(m.id===form.id.value?'active':'')+'" data-id="'+m.id+'"><b>'+m.code+'</b> <span class="pill">'+typeNames[m.type]+'</span><div class="muted">'+m.dive+' · '+m.depth+' · '+m.orientation+'</div><div>'+m.condition+'</div></div>').join("");
-      list.querySelectorAll("[data-id]").forEach(el => el.onclick = () => edit(el.dataset.id));
-    }
-    function renderTimeline(data) {
-      listTitle.textContent = "潜次时间线";
-      list.className = "timeline";
-      const groups = data.reduce((map, item) => ((map[item.dive] ||= []).push(item), map), {});
-      list.innerHTML = Object.entries(groups).map(([dive, items]) => '<div class="item"><b>'+dive+'</b><div class="muted">新增'+items.length+'个标记</div>'+items.map(i => '<div>'+i.code+' · '+typeNames[i.type]+'</div>').join("")+'</div>').join("");
-    }
-    function edit(id) {
-      const mark = marks.find(m => m.id === id);
-      if (!mark) return;
-      for (const [key, value] of Object.entries(mark)) if (form[key]) form[key].value = value;
-      pending = { x: mark.x, y: mark.y };
-      render();
-    }
-    map.addEventListener("click", event => {
-      const rect = map.getBoundingClientRect();
-      pending = { x: Number(((event.clientX - rect.left) / rect.width * 100).toFixed(2)), y: Number(((event.clientY - rect.top) / rect.height * 100).toFixed(2)) };
-      form.reset();
-      form.id.value = "";
-      form.code.value = "M-" + String(marks.length + 1).padStart(3, "0");
-      form.dive.value = "DIVE-01";
-      render();
-    });
-    form.onsubmit = event => {
-      event.preventDefault();
-      if (!pending) pending = { x: 50, y: 50 };
-      const data = Object.fromEntries(new FormData(form).entries());
-      if (data.id) Object.assign(marks.find(m => m.id === data.id), data, pending);
-      else marks.push({ ...data, id: crypto.randomUUID(), ...pending });
-      save(); render();
-    };
-    document.querySelector("#deleteBtn").onclick = () => {
-      if (!form.id.value) return;
-      marks = marks.filter(m => m.id !== form.id.value);
-      form.reset(); pending = null; save(); render();
-    };
-    document.querySelector("#exportBtn").onclick = () => {
-      const blob = new Blob([JSON.stringify(marks, null, 2)], { type: "application/json" });
-      const a = document.createElement("a");
-      a.href = URL.createObjectURL(blob); a.download = "dive-marks.json"; a.click(); URL.revokeObjectURL(a.href);
-    };
-    filter.onchange = render; view.onchange = render;
-    render();
-  </script>
+
+  <section class="console" id="tankView" hidden>
+    <div class="boardbar">
+      <div class="batchmeta" id="batchMeta"></div>
+      <div class="field"><label style="margin:0">达标阈值</label><input id="threshold" type="number" min="1" step="1"> <span class="muted">μS/cm</span></div>
+      <div class="field"><label style="margin:0">最短换水间隔</label><input id="intervalH" type="number" min="1" step="1"> <span class="muted">小时</span></div>
+      <div class="field"><label style="margin:0">槽位</label><select id="tankFilter"></select></div>
+      <div class="field"><label style="margin:0">状态</label>
+        <select id="stateFilter">
+          <option value="">全部判定</option>
+          <option value="ready">达标待结批</option>
+          <option value="high">电导率超标</option>
+          <option value="soaking">换水间隔不足</option>
+          <option value="nodata">尚无读数</option>
+          <option value="conflict">材质冲突</option>
+        </select>
+      </div>
+      <div class="spacer"></div>
+      <button id="closeBatchBtn" type="button">复核结批</button>
+    </div>
+    <div class="board">
+      <div class="column col-pending"><h3>待换水 <span class="count" id="cntPending"></span></h3><div id="colPending"></div></div>
+      <div class="column col-abn"><h3>异常 <span class="count" id="cntAbn"></span></h3><div id="colAbn"></div></div>
+      <div class="column col-done"><h3>结批 / 存档 <span class="count" id="cntDone"></span></h3><div id="colDone"></div></div>
+    </div>
+  </section>
+
+  <div class="modal" id="modal" hidden><div class="modal-card" id="modalCard"></div></div>
+
+  <script src="js/desalination.js"></script>
+  <script src="js/batch.js"></script>
+  <script src="js/app.js"></script>
 </body>
 </html>
